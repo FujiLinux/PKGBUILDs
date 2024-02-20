@@ -1,0 +1,42 @@
+diff --unified --recursive --text package.orig/sound/soc/apple/macaudio.c package.new/sound/soc/apple/macaudio.c
+--- package.orig/sound/soc/apple/macaudio.c	2024-01-19 05:08:13.000000000 -0800
++++ package.new/sound/soc/apple/macaudio.c	2024-02-19 23:30:37.162994070 -0800
+@@ -1490,31 +1490,31 @@
+ 	false,	AMP_SN012776,	SPKR_1W1T,	false,	10,	-20,
+ };
+ struct macaudio_platform_cfg macaudio_j274_cfg = {
+-	false,	AMP_TAS5770,	SPKR_1W,	false,	20,	-20,
++	true,	AMP_TAS5770,	SPKR_1W,	false,	20,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j293_cfg = {
+-	false,	AMP_TAS5770,	SPKR_2W,	true,	15,	-20,
++	true,	AMP_TAS5770,	SPKR_2W,	true,	15,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j313_cfg = {
+-	false,	AMP_TAS5770,	SPKR_1W,	true,	10,	-20,
++	true,	AMP_TAS5770,	SPKR_1W,	true,	10,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j314_j316_cfg = {
+-	false,	AMP_SN012776,	SPKR_2W1T,	true,	15,	-20,
++	true,	AMP_SN012776,	SPKR_2W1T,	true,	15,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j37x_j47x_cfg = {
+-	false,	AMP_SN012776,	SPKR_1W,	false,	20,	-20,
++	true,	AMP_SN012776,	SPKR_1W,	false,	20,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j413_cfg = {
+-	false,	AMP_SN012776,	SPKR_1W1T,	true,	15,	-20,
++	true,	AMP_SN012776,	SPKR_1W1T,	true,	15,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j415_cfg = {
+-	false,	AMP_SN012776,	SPKR_2W1T,	true,	15,	-20,
++	true,	AMP_SN012776,	SPKR_2W1T,	true,	15,	-20,
+ };
+ 
+ struct macaudio_platform_cfg macaudio_j45x_cfg = {

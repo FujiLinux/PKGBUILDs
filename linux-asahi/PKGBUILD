@@ -1,41 +1,66 @@
 # AArch64 Apple Silicon (Asahi Linux)
-# Maintainer: Janne Grunau <j@jannau.net>
+# Maintainer: Evan Welsh <ewlsh@fujilinux.org>
+# Contributor: Janne Grunau <j@jannau.net>
 
 buildarch=8
 
-_rcver=6.5
+_rcver=6.6
 #_rcrel=3
 _asahirel=15
-pkgrel=1
-
 _m1n1_version=1.4.0
 
 pkgbase=linux-asahi
-#_commit_id=asahi-${_nextver}-${_asahirel}
-_commit_id=asahi-${_rcver}${_rcrel+-rc}${_rcrel}-${_asahirel}
-_srcname=linux-${_commit_id}
-_kernelname=${pkgbase#linux}
-_desc="AArch64 Apple Silicon (M1 development kernel)"
 pkgver="${_rcver}${_rcrel:+rc}${_rcrel}.asahi${_asahirel}"
-arch=('aarch64')
-url="http://www.kernel.org/"
-license=('GPL2')
-
+pkgrel=1
+pkgdesc="Linux kernel for Apple Silicon (aarch64)"
+url='https://github.com/archlinux/linux'
+arch=(aarch64)
+license=(GPL2)
 makedepends=(
-  bc dtc kmod libelf pahole cpio perl rust rust-src rust-bindgen tar xz xmlto
+  bc
+  cpio
+  gettext
+  libelf
+  pahole
+  perl
+  python
+  tar
+  xz
+
+  # htmldocs
+  graphviz
+  imagemagick
+  python-sphinx
+  texlive-latexextra
+
+  # asahi
+  dtc
+  xmlto
+  rust
+  rust-src
+  rust-bindgen 
 )
 options=('!strip')
+_commit_id=asahi-${_rcver}${_rcrel+-rc}${_rcrel}-${_asahirel}
+_srcname=linux-${_commit_id}
 source=(
   https://github.com/AsahiLinux/linux/archive/${_commit_id}.tar.gz
   config         # the main kernel config file
-  config.edge    # overrides for linux-asahi-edge
+  macaudio-enable-speakers.patch  # patch to enable speakers on supported devices
 )
-sha256sums=('633796ecdc1e210565a67b20f8fdaa748204c32275403212a30f735b8de66abd'
-            '46917e449d51ce37675442cd280892f6521b719bdb75a05b558d456ad7fc9193'
-            '5cbdda1262f989a5247f4ef70690b569f9be8212bf8f576242bf6ac69036bddf')
-b2sums=('f1e8ca0919f218dce288a9f024fd211239212a17d7c19cf5f43736519fc6e7b7ef90853c3d80485ada2f2b2c0d91954c543f8f52d517317f25deed118cd8a0cd'
-        '8b3089d22d0b68e9b0c20a5e8f7ebe2626ef43cdc7053a94590ea3ca25417e76866e220ae98ff184e4912033d877eb89fd3c64bbe476889696220c5dd3b05e97'
-        '01a8b3b7e3c7bd528f6d07d2b581b8a56688305d42fdd0b1555fd26319c4369e2357bcaa8434a1a5e3123aa9fdc6f1a24de4813b819397af89ba8d0c5e896228')
+# TODO:
+# validpgpkeys=(
+#   ABAF11C65A2970B130ABE3C479BE3E4300411886  # Linus Torvalds
+#   647F28654894E3BD457199BE38DBBDC86092693E  # Greg Kroah-Hartman
+#   83BC8889351B5DEBBB68416EB8AC08600F108CDF  # Jan Alexander Steffens (heftig)
+# )
+sha256sums=('1d8d82dcfd87fb7153d81f52d01789be226c79637898de2b7407019ec7d35c8e'
+            'f0c2a11afb252f0f5f9e98c517f41c0789fcbfb88e9e3ced8a6e8f46a9947dff'
+            'SKIP')
+b2sums=('f0cdce0421bb8637d52e82d2ff0b7e07c29e828783c7cb8733f1582916be81bfd14a0b6a98f51f633ee9da3d10aa1fff6b27c5779bd9fa55c1d04615173d6d4b'
+        '1cf713dde049be012a1196d4a1a23f24e79099128eeaea7f79ecef85fba2766e29a883c6c03b545b6b9bff8f2fa963fbb9b2eb7a59364656f7ada479c86d31f5'
+        'SKIP')
+
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
@@ -45,118 +70,108 @@ prepare() {
 
   echo "Setting version..."
   echo "-$_asahirel-$pkgrel" > localversion.10-pkgrel
+  echo "${pkgbase#linux}" > localversion.20-pkgname
 
   local src
   for src in "${source[@]}"; do
     src="${src%%::*}"
     src="${src##*/}"
+    # TODO: src="${src%.zst}"
     [[ $src = *.patch ]] || continue
     echo "Applying patch $src..."
     patch -Np1 < "../$src"
   done
 
-  echo "Creating build directories..."
-  mkdir -p build/base build/edge
+  echo "Setting config..."
+  cp ../config .config
+  make olddefconfig
+  diff -u ../config .config || :
 
-  echo "Setting config (base)..."
-  cp ../config build/base/.config
-  make olddefconfig prepare O=$PWD/build/base
-  diff -u ../config build/base/.config || :
-  make -s kernelrelease O=$PWD/build/base > build/base/version
-
-  echo "Setting config (edge)..."
-  cat build/base/.config ../config.edge > build/edge/.config
-  make olddefconfig prepare O=$PWD/build/edge
-  make -s kernelrelease O=$PWD/build/edge > build/edge/version
-
-  echo "Prepared $pkgbase version $(<build/base/version)"
+  make -s kernelrelease > version
+  echo "Prepared $pkgbase version $(<version)"
 }
 
 build() {
   cd $_srcname
-  echo "Building base..."
-  make all O=$PWD/build/base
-  echo "Copying objects..."
-  cp build/edge/.config{,.save}
-  touch build/base/.config
-  cp -urT build/{base,edge}
-  rm build/edge/init/version.o
-  make O=$PWD/build/edge oldconfig prepare
-  cp build/edge/.config{.save,}
-  echo "Building edge..."
-  make O=$PWD/build/edge oldconfig prepare
-  make O=$PWD/build/edge all
+  make all
+
+  # TODO:
+  # make htmldocs
 }
 
-_package_kernel() {
+_package() {
   pkgdesc="The $pkgdesc kernel and modules"
-  depends=(coreutils kmod initramfs $2 "m1n1>=$_m1n1_version")
-  optdepends=('crda: to set the correct wireless channels of your country'
-              'linux-firmware: firmware images needed for some devices')
-  provides=(WIREGUARD-MODULE linux=${pkgver})
-  replaces=(wireguard-arch)
+  depends=(
+    coreutils
+    initramfs
+    kmod
+    "m1n1>=$_m1n1_version"
+  )
+  optdepends=(
+    'wireless-regdb: to set the correct wireless channels of your country'
+    'linux-firmware: firmware images needed for some devices'
+  )
+  provides=(
+    KSMBD-MODULE
+    VIRTUALBOX-GUEST-MODULES
+    WIREGUARD-MODULE
+    linux=${pkgver}
+  )
+  replaces=(
+    virtualbox-guest-modules-arch
+    wireguard-arch
+    linux-asahi-edge
+  )
 
-  local kernver="$(<$O/version)"
-  local modulesdir="$pkgdir/usr/lib/modules/$kernver"
+  cd $_srcname
+  local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
 
   echo "Installing boot image..."
   # systemd expects to find the kernel here to allow hibernation
   # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
-  install -Dm644 "$O"/arch/arm64/boot/Image "$modulesdir/vmlinuz"
+  install -Dm644 arch/arm64/boot/Image "$modulesdir/vmlinuz"
 
   # Used by mkinitcpio to name the kernel
-  echo "$1" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
+  echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
   echo "Installing modules..."
-  make O="$O" INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 modules_install
+  make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+    DEPMOD=/doesnt/exist modules_install  # Suppress depmod
 
   echo "Installing device trees..."
-  install -Dt "$modulesdir/dtbs" "$O"/arch/arm64/boot/dts/apple/*.dtb
+  install -Dt "$modulesdir/dtbs" arch/arm64/boot/dts/apple/*.dtb
 
-  # remove build and source links
-  rm "$modulesdir"/{source,build}
-}
-
-_package() {
-  cd $_srcname
-  export O="$PWD/build/base"
-  _package_kernel "$pkgbase"
-}
-
-_package-edge() {
-  cd $_srcname
-  export O="$PWD/build/edge"
-  _package_kernel "$pkgbase-edge" "$pkgbase=$pkgver"
+  # remove build link
+  rm "$modulesdir"/build
 }
 
 _package-headers() {
   pkgdesc="Headers and scripts for building modules for the $pkgdesc kernel"
   depends=(pahole)
+  replaces=(linux-asahi-edge-headers)
 
   KARCH=arm64
 
   cd $_srcname
-  O=build/base
-  local builddir="$pkgdir/usr/lib/modules/$(<${O}/version)/build"
+  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
   echo "Installing build files..."
-  install -Dt "$builddir" -m644 $O/.config Makefile $O/Module.symvers $O/System.map \
-    localversion.* $O/version $O/vmlinux
+  install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+    localversion.* version vmlinux
   install -Dt "$builddir/kernel" -m644 kernel/Makefile
-  cp -t "$builddir" -a scripts $O/scripts
+  install -Dt "$builddir/arch/${KARCH}" -m644 arch/${KARCH}/Makefile
+  cp -t "$builddir" -a scripts
 
-  # required when STACK_VALIDATION is enabled
-  #install -Dt "$builddir/tools/objtool" tools/objtool/objtool
+  # TODO: required when STACK_VALIDATION is enabled
+  # install -Dt "$builddir/tools/objtool" tools/objtool/objtool
 
-  # required when DEBUG_INFO_BTF_MODULES is enabled
-  #install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
+  # TODO: required when DEBUG_INFO_BTF_MODULES is enabled
+  # install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
 
   echo "Installing headers..."
-  cp -t "$builddir" -a include $O/include
-
-  install -Dt "${builddir}/arch/${KARCH}" -m644 arch/${KARCH}/Makefile
-  install -Dt "${builddir}/arch/${KARCH}/kernel" -m644 $O/arch/${KARCH}/kernel/asm-offsets.s
-  cp -t "${builddir}/arch/${KARCH}" -a arch/${KARCH}/include $O/arch/${KARCH}/include
+  cp -t "$builddir" -a include
+  cp -t "$builddir/arch/${KARCH}" -a arch/${KARCH}/include
+  install -Dt "$builddir/arch/${KARCH}/kernel" -m644 arch/${KARCH}/kernel/asm-offsets.s
 
   install -Dt "$builddir/drivers/md" -m644 drivers/md/*.h
   install -Dt "$builddir/net/mac80211" -m644 net/mac80211/*.h
@@ -192,13 +207,10 @@ _package-headers() {
   echo "Removing loose objects..."
   find "$builddir" -type f -name '*.o' -printf 'Removing %P\n' -delete
 
-  echo "Removing cmd files..."
-  find "$builddir" -type f -name '*.cmd' -printf 'Removing %P\n' -delete
-
   echo "Stripping build tools..."
   local file
   while read -rd '' file; do
-    case "$(file -bi "$file")" in
+    case "$(file -Sib "$file")" in
       application/x-sharedlib\;*)      # Libraries (.so)
         strip -v $STRIP_SHARED "$file" ;;
       application/x-archive\;*)        # Libraries (.a)
@@ -216,17 +228,32 @@ _package-headers() {
   echo "Adding symlink..."
   mkdir -p "$pkgdir/usr/src"
   ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
-
-  O=build/edge
-  local builddir2="$pkgdir/usr/lib/modules/$(<${O}/version)/build"
-  mkdir -p $builddir2
-  cp -rl $builddir/* $builddir2
-  cp --remove-destination $O/{.config,System.map,version,Module.symvers,vmlinux} $builddir2
-  rm -rf $builddir2/include/config
-  cp -r $O/include/config $builddir2/include/config
 }
 
-pkgname=("$pkgbase" "$pkgbase-headers" "$pkgbase-edge")
+_package-docs() {
+  pkgdesc="Documentation for the $pkgdesc kernel"
+
+  cd $_srcname
+  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
+
+  echo "Installing documentation..."
+  local src dst
+  while read -rd '' src; do
+    dst="${src#Documentation/}"
+    dst="$builddir/Documentation/${dst#output/}"
+    install -Dm644 "$src" "$dst"
+  done < <(find Documentation -name '.*' -prune -o ! -type d -print0)
+
+  echo "Adding symlink..."
+  mkdir -p "$pkgdir/usr/share/doc"
+  ln -sr "$builddir/Documentation" "$pkgdir/usr/share/doc/$pkgbase"
+}
+
+pkgname=(
+  "$pkgbase"
+  "$pkgbase-headers"
+)
+# TODO: Enable "$pkgbase-docs"
 for _p in "${pkgname[@]}"; do
   eval "package_$_p() {
     $(declare -f "_package${_p#$pkgbase}")

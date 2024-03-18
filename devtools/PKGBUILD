@@ -1,0 +1,59 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Christian Heusel <gromit@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=devtools-aarch64
+epoch=1
+pkgver=1.1.1
+pkgrel=1
+pkgdesc='Tools for Arch Linux package maintainers adapted for Fuji Linux and aarch64'
+arch=('any')
+license=('GPL')
+url='https://github.com/FujiLinux/devtools'
+depends=(
+  arch-install-scripts
+  awk
+  bash
+  binutils
+  coreutils
+  diffutils
+  fakeroot
+  findutils
+  grep
+  jq
+  openssh
+  parallel
+  rsync
+  sed
+  util-linux
+  breezy
+  git
+  mercurial
+  subversion
+)
+makedepends=(
+  asciidoc
+  shellcheck
+)
+optdepends=('btrfs-progs: btrfs support')
+replaces=(devtools-git-poc devtools)
+provides=(devtools)
+conflicts=(devtools)
+source=(https://github.com/FujiLinux/devtools/releases/download/v${pkgver}-fuji/devtools-${pkgver}-fuji.tar.gz{,.sig})
+validpgpkeys=('FB398BBE527AFF9D7F4C34C9069381A0EC5A60D0')  # Evan Welsh <ewlsh@fujilinux.org>
+sha256sums=('c9ea16cbf6bc59cbbeb066dd5a57a39f25c29e30c863b35f63d2804459e122c6'
+            'SKIP')
+b2sums=('17903b0f86fe3157f7991128150f8b4793c154174f472f3c2662b5a71724b5b585353e0eb6af71f10ad2a7cebff7513b3936affacdea225a0c1f0c44ede8e760'
+        'SKIP')
+
+build() {
+  cd devtools-${pkgver}-fuji
+  make BUILDTOOLVER="${epoch}:${pkgver}-${pkgrel}-${arch}" PREFIX=/usr
+}
+
+package() {
+  cd devtools-${pkgver}-fuji
+  make PREFIX=/usr DESTDIR="${pkgdir}" install
+}
+
+# vim: ts=2 sw=2 et:

@@ -1,6 +1,6 @@
 pkgbase = fujilinux-keyring
 	pkgdesc = Fuji Linux PGP keyring
-	pkgver = 20240317
+	pkgver = 20240331
 	pkgrel = 1
 	url = https://github.com/FujiLinux/fujilinux-keyring
 	install = fujilinux-keyring.install
@@ -15,7 +15,7 @@ pkgbase = fujilinux-keyring
 	makedepends = systemd
 	depends = pacman
 	source = fujilinux-keyring::git+https://github.com/FujiLinux/fujilinux-keyring.git#tag=8fe455e27e35a55a15d714637024b69f9dceab89?signed
-	validpgpkeys = FB398BBE527AFF9D7F4C34C9069381A0EC5A60D0
+	validpgpkeys = A3C5EBBF43FBA5F829F1A2548D66762250C07E85
 	sha256sums = SKIP
 
 pkgname = fujilinux-keyring
